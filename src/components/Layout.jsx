@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { usePlan } from "../context/PlanContext.jsx";
+import PlanBar from "./PlanBar.jsx";
 
 export default function Layout() {
   const { items } = usePlan();
@@ -28,6 +29,7 @@ export default function Layout() {
       <main id="main" className="container main" tabIndex={-1}>
         <Outlet />
       </main>
+      <PlanBar />
       <footer className="site-footer">
         <div className="container">
           <p>Margalla Fit · Plot 12, F-7 Markaz, Islamabad · Student project – all bookings are simulated.</p>
