@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { usePlan } from "../context/PlanContext.jsx";
 import LoadGate from "../components/LoadGate.jsx";
@@ -20,6 +20,7 @@ export default function CheckoutPage() {
 
   const [touched, setTouched] = useState({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [blockedCount, setBlockedCount] = useState(0); // increments on each blocked submit
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const errorSummaryRef = useRef(null);
@@ -34,11 +35,20 @@ export default function CheckoutPage() {
   const visibleErrors = FIELD_ORDER.filter((name) => errors[name]);
   const experienceChosen = Boolean(draft.experience);
 
+  // After a blocked submit renders the error summary, move focus to it so
+  // keyboard and screen-reader users hear what needs fixing.
+  useEffect(() => {
+    if (blockedCount > 0) errorSummaryRef.current?.focus();
+  }, [blockedCount]);
+
   const handleChange = (event) => {
     const { name, type, value, checked } = event.target;
     updateDraft(name, type === "checkbox" ? checked : value);
   };
   const handleBlur = (event) => {
+    // If focus is moving to the submit button, skip: showing an error now would
+    // shift the button mid-click. The submit handler reveals all errors anyway.
+    if (event.relatedTarget?.type === "submit") return;
     const { name } = event.target;
     setTouched((prev) => ({ ...prev, [name]: true }));
   };
@@ -50,8 +60,7 @@ export default function CheckoutPage() {
 
     const blocked = visibleErrors.length > 0 || issues.length > 0 || (experienceChosen && ineligible.length > 0);
     if (blocked) {
-      // Move focus to the error summary so keyboard/screen-reader users hear what to fix.
-      requestAnimationFrame(() => errorSummaryRef.current?.focus());
+      setBlockedCount((count) => count + 1);
       return;
     }
 
