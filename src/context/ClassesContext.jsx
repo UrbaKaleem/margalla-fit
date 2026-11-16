@@ -18,8 +18,6 @@ export function ClassesProvider({ children }) {
   // Load (or reload) whenever the retry counter or demo settings change.
   useEffect(() => {
     let ignore = false; // cleanup flag: ignore results from an outdated request
-    setStatus("loading");
-    setError("");
 
     loadClasses(demo)
       .then((records) => {
@@ -43,9 +41,15 @@ export function ClassesProvider({ children }) {
     writeDemoSettings(demo);
   }, [demo]);
 
-  const reload = useCallback(() => setReloadKey((key) => key + 1), []);
+  // Status is set to "loading" in the event that starts a new request (not inside the effect).
+  const reload = useCallback(() => {
+    setStatus("loading");
+    setError("");
+    setReloadKey((key) => key + 1);
+  }, []);
 
   const updateDemo = useCallback((key, value) => {
+    setStatus("loading");
     setDemo((prev) => ({ ...prev, [key]: value }));
   }, []);
 

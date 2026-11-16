@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useClasses } from "../context/ClassesContext.jsx";
+import { usePlan } from "../context/PlanContext.jsx";
 import LoadGate from "../components/LoadGate.jsx";
 import FilterBar from "../components/FilterBar.jsx";
 import ClassCard from "../components/ClassCard.jsx";
@@ -14,11 +15,17 @@ import {
 
 export default function ClassListPage() {
   const { classes } = useClasses();
+  const { items, addToPlan, removeFromPlan } = usePlan();
   // Filters live in the URL so they survive Back/Forward, refresh and sharing.
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = useMemo(() => filtersFromParams(searchParams), [searchParams]);
 
   const results = useMemo(() => filterAndSortClasses(classes, filters), [classes, filters]);
+
+  // Planned classes stay in the plan even when filters hide them; tell the user.
+  const hiddenPlanned = items.filter(
+    (item) => classes.some((c) => c.id === item.classId) && !results.some((r) => r.id === item.classId)
+  ).length;
 
   const updateFilter = (key, value) => {
     const next = { ...filters, [key]: value };
@@ -41,6 +48,8 @@ export default function ClassListPage() {
             <FilterBar filters={filters} onChange={updateFilter} onReset={resetFilters} />
             <p className="results-count" aria-live="polite">
               Showing {results.length} of {classes.length} classes
+              {hiddenPlanned > 0 &&
+                ` · ${hiddenPlanned} class${hiddenPlanned === 1 ? "" : "es"} in your plan hidden by filters (still saved)`}
             </p>
             {results.length === 0 ? (
               <EmptyState
@@ -57,7 +66,12 @@ export default function ClassListPage() {
               <ul className="class-grid">
                 {results.map((record) => (
                   <li key={record.id}>
-                    <ClassCard record={record} />
+                    <ClassCard
+                      record={record}
+                      planItem={items.find((item) => item.classId === record.id)}
+                      onAdd={addToPlan}
+                      onRemove={removeFromPlan}
+                    />
                   </li>
                 ))}
               </ul>
