@@ -4,10 +4,10 @@
 
 | | |
 |---|---|
-| Student | _Your Name_ |
-| Roll number | _24I-XXXX_ |
-| Section | _X_ |
-| GitHub | _https://github.com/your-username/margalla-fit_ |
+| Student | Urba Kaleem |
+| Roll number | 24i-2108 |
+| Section | CY-B |
+| GitHub | https://github.com/UrbaKaleem/margalla-fit.git |
 | Live site | _https://margalla-fit.vercel.app_ |
 
 ## Project description
