@@ -1,46 +1,48 @@
 # Frontend Decisions
 
-Three decisions, one for each problem found on the reference websites.
-_(Replace the bracketed reference-site details with what you actually observed.)_
+One decision for each problem observed on the reference website:
+University of Warwick class timetable – https://warwick.ac.uk/services/teamwarwick/activities/classes/timetable/ (reviewed 16 November 2026).
+
+Decision 1 concerns **interaction/state**. Decision 2 concerns **mobile layout / information hierarchy**.
 
 ---
 
-## Decision 1 – Keep search and filters when moving between list and details  *(interaction / state)*
+## Decision 1 – Search, filters and sorting kept in the URL  *(interaction / state)*
 
 | Field | Content |
 |---|---|
-| **Problem** | On [reference site], after filtering the timetable and opening a class, pressing Back returned to the unfiltered list, so the user had to search and filter again. |
-| **Decision** | Store search, filters and sort in the URL query string (`/classes?q=yoga&level=Beginner`) using `useSearchParams`. The class link passes the current query in route state, so "Back to classes" and the browser Back button both return to the same filtered list. Classes in the plan stay saved even when filters hide them, and the results line says how many are hidden. |
-| **Alternative** | Keep filters in React Context state. |
-| **Reason** | The URL survives Back/Forward, refresh and sharing a link, which Context state does not (lost on refresh). Customers comparing classes over several days can return to their exact search. |
-| **Tradeoff** | URLs are longer, and values from the URL must be validated (`filtersFromParams` ignores unknown values) because users can edit them. Search updates use `replace` so typing doesn't fill the history. |
-| **Code location** | `src/pages/ClassListPage.jsx` (`updateFilter`, `hiddenPlanned`); `src/utils/classHelpers.js` (`filtersFromParams`, `filtersToParams`); `src/components/ClassCard.jsx` (`state={{ fromSearch }}`); `src/pages/ClassDetailsPage.jsx` (`backTo`) |
-| **Evidence** | 1. Open `/classes`, search "yoga", set Level = Beginner. 2. Open a class. 3. Press Back. → The list still shows 2 results with the same search and filter. _(screenshots)_ |
+| **Problem** | The reference timetable lists 100+ weekly classes in separate day sections with no search, filter or sort, so users must scan every day to find a class of a particular type or level. |
+| **Decision** | One list for the whole week with a search box (title, type, instructor, level, description), Type/Level/Day filters, "Hide full classes" and four sort orders, all working together. The values are stored in the URL query (e.g. `/classes?q=yoga&level=Beginner`), so Back/Forward, refresh and a shared link keep them. A count shows how many results match and how many planned classes are hidden by the filters. |
+| **Alternative** | Keep a day-by-day timetable and let users scan manually (or keep filters only in component state). |
+| **Reason** | Students looking for, say, a beginner evening class can narrow 12 classes (or 100+) in one step. Keeping filters in the URL means opening a class and pressing Back doesn't lose the search. |
+| **Tradeoff** | More controls to design and test. URL values can be edited by hand, so they must be validated (`filtersFromParams` ignores unknown values). |
+| **Code location** | `src/pages/ClassListPage.jsx` – `updateFilter`, `resetFilters`, `hiddenPlanned`; `src/components/FilterBar.jsx`; `src/utils/classHelpers.js` – `filterAndSortClasses`, `filtersFromParams`, `filtersToParams` |
+| **Evidence** | 1. Open `/classes`. 2. Type "yoga" and choose Level = Beginner → 2 results, URL `/classes?q=yoga&level=Beginner`. 3. Open a class, then press Back → same 2 results, search box still "yoga". _(screenshots: before/after)_ |
 
 ---
 
-## Decision 2 – Show availability, level and price on every listing card  *(information hierarchy)*
+## Decision 2 – Responsive class cards instead of a wide table  *(mobile layout / information hierarchy)*
 
 | Field | Content |
 |---|---|
-| **Problem** | On [reference site], the class list showed only the class name and time. Seats left, level requirements and price appeared only after opening the class or starting the booking, so users spent time on classes they could not book. |
-| **Decision** | Each card shows, in order: level badge + seat badge ("Only 2 seats left", "Full – no seats left"), title, day/time/duration/instructor, an experience warning for Advanced classes, then price and the primary action. Full classes are greyed out with a disabled "Full" button, and a "Hide full classes" filter is available. Status always uses text as well as colour. |
-| **Alternative** | Keep cards minimal and show availability only on the details page. |
-| **Reason** | Customers can compare and rule out classes from the list itself, and fewer people reach checkout and then abandon it because a class is full or unsuitable. |
-| **Tradeoff** | Cards are denser and taller, especially on mobile; badges had to be kept short to stay readable. |
-| **Code location** | `src/components/ClassCard.jsx`; `src/components/Badges.jsx` (`AvailabilityBadge`, `LevelBadge`); `src/styles/global.css` (`.class-card`, `.badge--*`) |
-| **Evidence** | Open `/classes` at 390 px and 1280 px: "Power Pilates Core" shows "Full – no seats left" with a disabled button; Advanced classes show the experience note. _(screenshots)_ |
+| **Problem** | The reference timetable is a wide table; the page itself tells small-screen users to swipe horizontally or use Shift + Mouse Wheel to see all columns. |
+| **Decision** | Each class is a card in a grid that reflows to one column at phone width. Each card shows, top to bottom: level and seats-left badges (text + colour), title, day/time/duration/instructor, experience note for Advanced classes, then price next to the primary "Add to plan" button. On phones the extra filters collapse behind a "Filters" button, and a sticky bar shows the plan total and "View plan". |
+| **Alternative** | Keep the table layout and rely on horizontal scrolling at small widths. |
+| **Reason** | At 390 px everything needed to choose and act on a class is visible without sideways scrolling, and full classes are recognisable before tapping. |
+| **Tradeoff** | Cards take more vertical space than table rows, so the list is longer to scroll; the sticky plan bar was added to keep the next step reachable. |
+| **Code location** | `src/components/ClassCard.jsx`; `src/components/Badges.jsx`; `src/components/PlanBar.jsx`; `src/styles/global.css` – `.class-grid`, `.class-card`, `@media (max-width: 640px)` rules (`.filter-bar__fields`, `.plan-bar`) |
+| **Evidence** | Open `/classes` in DevTools device mode at 390 px: one column of cards, no horizontal scrollbar, "Filters" button expands the filters, plan bar appears after adding a class. Compare with 1280 px (four columns). _(screenshots at both widths)_ |
 
 ---
 
-## Decision 3 – Specific inline form errors that never clear valid input  *(interaction / form state)*
+## Decision 3 – A connected booking journey inside the app  *(interaction / state)*
 
 | Field | Content |
 |---|---|
-| **Problem** | On [reference site], submitting the booking form with one invalid field showed a generic error at the top and cleared other fields, so the user had to retype everything. |
-| **Decision** | The form is fully controlled. Each field shows its own message after the user leaves it or submits ("Use the format 03XX-XXXXXXX"). A blocked submit shows an error summary with links to each field and moves focus to it. Values are never reset on error. The draft is kept in `PlanContext` (memory only), so going back to the plan to remove an ineligible class keeps the form filled in. |
-| **Alternative** | Use native browser validation (`required`, `pattern`) and its default pop-up messages. |
-| **Reason** | Clear messages and preserved input reduce rework and abandoned bookings. Native pop-ups can't explain studio rules (member ID format, experience vs. Advanced classes) and look different in each browser. |
-| **Tradeoff** | More code (touched/submitted state, error summary). Keeping the draft only in memory means it is lost on refresh; this was chosen deliberately so personal details are not written to localStorage. |
-| **Code location** | `src/pages/CheckoutPage.jsx` (`handleSubmit`, `handleBlur`, `showError`); `src/rules/bookingValidation.js` (`validateBookingForm`); `src/components/FormField.jsx`; `src/context/PlanContext.jsx` (`draft`, `updateDraft`) |
-| **Evidence** | 1. Add a class, go to `/checkout`. 2. Type a valid name and phone `0300-12`, then submit. → Focus moves to the error summary, the name is kept, and the phone shows a format message. _(screenshots)_ |
+| **Problem** | On the reference site, browsing and booking are separate: "Book a class" opens a different booking service in a new window, so the user leaves the timetable they were reading. |
+| **Decision** | Listing → details → weekly plan → booking form → summary → confirmation all run in one React app with shared state (`ClassesContext`, `PlanContext`). The plan is saved in localStorage and re-checked against current availability. The three operating rules are applied before confirmation. |
+| **Alternative** | Link out to a separate booking service from each class, as the reference site does. |
+| **Reason** | The user keeps their context (selected classes, people per session, running total) from discovery to confirmation. Problems such as a full class or an ineligible Advanced class are explained at the point where they can be fixed. |
+| **Tradeoff** | More shared state and validation logic to maintain in the frontend. Because there is no server, bookings are simulated and seat counts are not actually reduced. |
+| **Code location** | `src/context/PlanContext.jsx` – `addToPlan`, `updateAttendees`, `removeFromPlan`; `src/hooks/usePlanLines.js`; `src/utils/planHelpers.js` – `getPlanLines`; `src/pages/CheckoutPage.jsx` – `handleSubmit`; `src/rules/bookingRules.js`; `src/pages/ConfirmationPage.jsx` |
+| **Evidence** | 1. Add Boxing Basics (2 people) from its details page. 2. Open My plan → estimated total shown. 3. Continue → fill the form → Confirm → confirmation page shows reference, sessions and total. _(screenshots of each step)_ |
